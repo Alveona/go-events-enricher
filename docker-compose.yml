@@ -1,0 +1,35 @@
+version: "3.7"
+
+services:
+  server:
+    hostname: server
+    container_name: go-events-enricher-server
+    image: golang:1.19.4
+    entrypoint: /run_service.sh
+    env_file: ./deployment/dev.env
+    environment:
+      - MIGRATIONS_DIR=/go/src/go-events-enricher/migrations
+      - WORK_DIR=/go/src/go-events-enricher
+    volumes:
+      - ./deployment/run_service.sh:/run_service.sh
+      - ./:/go/src/go-events-enricher
+    depends_on:
+      - clickhouse
+    ports:
+      - 17001:17001
+
+  clickhouse:
+    hostname: clickhouse
+    image: docker.io/clickhouse/clickhouse-server:latest
+    environment:
+      - CLICKHOUSE_USER=events_enricher
+      - CLICKHOUSE_PASSWORD=events_enricher
+      - CLICKHOUSE_DB=events
+    healthcheck:
+      test: [ "CMD", "wget", "-O", "-", "http://localhost:8123/ping" ]
+      interval: 1s
+      timeout: 60s
+      retries: 15
+    ports:
+      - '9000:9000'
+      - '8123:8123'

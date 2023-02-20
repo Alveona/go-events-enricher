@@ -1,0 +1,70 @@
+swagger: "2.0"
+info:
+  title: Events enricher
+  description: Clickhouse proxy events microservice 
+  version: 1.0.0
+host: localhost
+schemes:
+  - http
+consumes:
+  - application/json
+produces:
+  - application/json
+
+paths:
+  /v1/events/produce:
+    post:
+      summary: Produce new events
+      operationId: produceEvents
+      parameters:
+        - name: payload
+          in: body
+          schema:
+            $ref: '#/definitions/ProduceEventsPayload'
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: '#/definitions/ProduceEventsResponse'
+        422:
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/Error'
+        500:
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/Error'
+
+definitions:
+  ProduceEventsResponse:
+    type: object
+    properties:
+      status:
+        type: string
+        enum: ['OK']
+
+  ProduceEventsPayload:
+    type: object
+    required:
+      - payload
+    properties:
+      payload:
+        type: string
+        description: Non-serialized JSONs event, \n separated
+        example: '{\"client_time\":\"2020-12-01 23:59:00\",\"device_id\":\"0287D9AA-4ADF-4B37-A60F-3E9E645C821E\",\"device_os\":\"iOS 13.5.1\",\"session\":\"ybuRi8mAUypxjbxQ\",\"sequence\":1,\"event\":\"app_start\",\"param_int\":123,\"param_str\":\"some text\"}'
+
+  Error:
+    type: object
+    required:
+      - message
+      - code
+    description: Error message
+    properties:
+      message:
+        type: string
+      code:
+        type: integer
+
+
+
+
