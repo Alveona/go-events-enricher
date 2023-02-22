@@ -6,6 +6,9 @@ import (
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/Workiva/go-datastructures/queue"
+	"github.com/sirupsen/logrus"
+	"go.uber.org/ratelimit"
 
 	"github.com/pkg/errors"
 
@@ -15,19 +18,94 @@ import (
 
 const eventsTable = "events.logs"
 
-type Metrics interface {
+type StorageMetrics interface {
 	QueryDuration(duration time.Duration, labels ...string)
 }
 
-type CHStorage struct {
-	conn    clickhouse.ChConn
-	metrics Metrics
+type BufferMetrics interface {
+	BufferWriteIOInc()
+	BufferReadIOInc()
 }
 
-func NewCHRepo(conn clickhouse.ChConn, m Metrics) *CHStorage {
+type CHStorage struct {
+	conn           clickhouse.ChConn
+	storageMetrics StorageMetrics
+	bufferMetrics  BufferMetrics
+	rl             ratelimit.Limiter
+	q              *queue.RingBuffer
+	bufferCfg      clickhouse.BufferConfig
+}
+
+func NewCHRepo(conn clickhouse.ChConn, storageMetrics StorageMetrics, bufferMetrics BufferMetrics, bufferCfg clickhouse.BufferConfig) *CHStorage {
 	return &CHStorage{
-		conn:    conn,
-		metrics: m,
+		conn:           conn,
+		storageMetrics: storageMetrics,
+		bufferMetrics:  bufferMetrics,
+		rl:             ratelimit.New(bufferCfg.Ratelimit),
+		q:              queue.NewRingBuffer(bufferCfg.BufferSize),
+		bufferCfg:      bufferCfg,
+	}
+}
+
+func (r *CHStorage) ProcessInsertEvents(ctx context.Context, events []*entities.EventDTO) error {
+	if !r.bufferCfg.WithBuffer {
+		return r.insertEvents(ctx, events)
+	}
+	for {
+		added, _ := r.q.Offer(events)
+		if added {
+			r.bufferMetrics.BufferWriteIOInc()
+			return nil
+		}
+		time.Sleep(1 * time.Second)
+	}
+}
+
+func (r *CHStorage) StartQueueProducing() {
+	go func() {
+		for {
+			ctx := context.Background()
+			item, err := r.q.Poll(1)
+			if err != nil {
+				time.Sleep(r.bufferCfg.DequeueDelay)
+				continue
+			}
+			r.bufferMetrics.BufferReadIOInc()
+
+			r.rl.Take()
+			events, ok := item.([]*entities.EventDTO)
+			if !ok {
+				logrus.Errorf("An invalid event type: %+v", events)
+				continue
+			}
+
+			err = r.insertEvents(ctx, events)
+			if err != nil {
+				logrus.Errorf("Failed to insert events from buffer: %+v", err)
+				continue
+			}
+		}
+	}()
+
+}
+
+func (r *CHStorage) StopQueueProducing() error {
+	done := make(chan bool, 1)
+	logrus.Info("Clickhouse buffer has been interrupted")
+	go func() {
+		for r.q.Len() != 0 {
+			time.Sleep(r.bufferCfg.BufferWaitRetries)
+		}
+		logrus.Info("Clickhouse buffer is empty")
+		done <- true
+	}()
+
+	select {
+	case <-done:
+		logrus.Info("Clickhouse buffer has been gracefully stopped")
+		return nil
+	case <-time.After(r.bufferCfg.DequeueTimeout):
+		return errors.New("Reached the timeout while shutting down the Clickhouse queue")
 	}
 }
 
@@ -48,7 +126,7 @@ func prepareInsertEventQuery(event *entities.EventDTO) (string, []interface{}, e
 	return rawRequest.ToSql()
 }
 
-func (r *CHStorage) InsertEvents(ctx context.Context, events []*entities.EventDTO) error {
+func (r *CHStorage) insertEvents(ctx context.Context, events []*entities.EventDTO) error {
 
 	for _, event := range events {
 		// Clickhouse driver requires "transaction" to present to be able to insert values.
@@ -70,7 +148,7 @@ func (r *CHStorage) InsertEvents(ctx context.Context, events []*entities.EventDT
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		r.metrics.QueryDuration(time.Since(queryStart), "InsertEvents")
+		r.storageMetrics.QueryDuration(time.Since(queryStart), "InsertEvents")
 	}
 
 	return nil

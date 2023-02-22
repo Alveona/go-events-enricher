@@ -44,7 +44,7 @@ func (s *syncerSuite) TestIncVendors() {
 		{
 			name: "success",
 			mockStorage: func(storage *MockclickhouseStorage) {
-				storage.EXPECT().InsertEvents(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				storage.EXPECT().ProcessInsertEvents(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 			},
 			mockMetric: func(metric *MockprocessorMetrics) {
 				metric.EXPECT().TypesInc("app_start").Times(1)

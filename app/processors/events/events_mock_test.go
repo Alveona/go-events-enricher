@@ -35,18 +35,18 @@ func (m *MockclickhouseStorage) EXPECT() *MockclickhouseStorageMockRecorder {
 	return m.recorder
 }
 
-// InsertEvents mocks base method.
-func (m *MockclickhouseStorage) InsertEvents(ctx context.Context, events []*entities.EventDTO) error {
+// ProcessInsertEvents mocks base method.
+func (m *MockclickhouseStorage) ProcessInsertEvents(ctx context.Context, events []*entities.EventDTO) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InsertEvents", ctx, events)
+	ret := m.ctrl.Call(m, "ProcessInsertEvents", ctx, events)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// InsertEvents indicates an expected call of InsertEvents.
-func (mr *MockclickhouseStorageMockRecorder) InsertEvents(ctx, events interface{}) *gomock.Call {
+// ProcessInsertEvents indicates an expected call of ProcessInsertEvents.
+func (mr *MockclickhouseStorageMockRecorder) ProcessInsertEvents(ctx, events interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertEvents", reflect.TypeOf((*MockclickhouseStorage)(nil).InsertEvents), ctx, events)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProcessInsertEvents", reflect.TypeOf((*MockclickhouseStorage)(nil).ProcessInsertEvents), ctx, events)
 }
 
 // MockprocessorMetrics is a mock of processorMetrics interface.
