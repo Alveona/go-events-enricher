@@ -7,7 +7,7 @@ import (
 )
 
 type clickhouseStorage interface {
-	InsertEvents(ctx context.Context, events []*entities.EventDTO) error
+	ProcessInsertEvents(ctx context.Context, events []*entities.EventDTO) error
 }
 
 type processorMetrics interface {
@@ -32,7 +32,7 @@ func (p *Processor) Process(ctx context.Context, events []*entities.EventDTO) er
 		p.metrics.TypesInc(event.Event)
 		p.metrics.OSInc(event.DeviceOS)
 	}
-	err := p.chStorage.InsertEvents(ctx, events)
+	err := p.chStorage.ProcessInsertEvents(ctx, events)
 	if err != nil {
 		return err
 	}

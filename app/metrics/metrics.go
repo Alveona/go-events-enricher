@@ -90,3 +90,38 @@ func (c *StorageContainer) Collectors() []prometheus.Collector {
 		c.storageExec,
 	}
 }
+
+type StorageBufferMetricsContainer struct {
+	BufferWriteIO prometheus.Counter
+	BufferReadIO  prometheus.Counter
+}
+
+func NewStorageBufferMetricsContainer(appName string) *StorageBufferMetricsContainer {
+	return &StorageBufferMetricsContainer{
+		BufferWriteIO: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: appName,
+			Name:      "buffer_write_io",
+			Help:      "writes to the response buffer",
+		}),
+		BufferReadIO: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: appName,
+			Name:      "buffer_read_io",
+			Help:      "reads from the responses buffer",
+		}),
+	}
+}
+
+func (r *StorageBufferMetricsContainer) BufferWriteIOInc() {
+	r.BufferWriteIO.Inc()
+}
+
+func (r *StorageBufferMetricsContainer) BufferReadIOInc() {
+	r.BufferReadIO.Inc()
+}
+
+func (r *StorageBufferMetricsContainer) Collectors() []prometheus.Collector {
+	return []prometheus.Collector{
+		r.BufferWriteIO,
+		r.BufferReadIO,
+	}
+}

@@ -43,16 +43,21 @@ func (svc *EventsEnricher) ConfigureService() error {
 	}
 
 	storageMetrics := metrics.NewStorageContainer(svc.Name())
+	storageBufferMetrics := metrics.NewStorageBufferMetricsContainer(svc.Name())
 	svc.system = system.New(clickhouseDB)
 
 	eventsProcessorMetrics := metrics.NewProcessorContainer(svc.Name())
 	svc.Metrics().MustRegister(metrics.GetMetrics(
 		storageMetrics,
+		storageBufferMetrics,
 		eventsProcessorMetrics,
 	)...)
 
-	svc.storages = storages.New(clickhouseDB, storageMetrics, cfg)
+	svc.storages = storages.New(clickhouseDB, storageMetrics, storageBufferMetrics, cfg)
 	svc.processors = processors.New(svc.storages, eventsProcessorMetrics)
+
+	svc.storages.ClickhouseStorage.StartQueueProducing()
+
 	return nil
 }
 
@@ -90,8 +95,12 @@ func (svc *EventsEnricher) HealthCheckers() []swgservice.Checker {
 }
 
 func (svc *EventsEnricher) OnShutdown() {
+	logrus.Warn("flushing clickhouse buffer...")
+	if err := svc.storages.ClickhouseStorage.StopQueueProducing(); err != nil {
+		logrus.Errorf("failed to close the clickhouse buffer: %v", err)
+	}
 	logrus.Warn("shutting down clickhouse...")
 	if err := svc.system.Clickhouse.Master().Close(); err != nil {
-		logrus.Errorf("close clickhouse connection: %+v", err)
+		logrus.Errorf("failed to close clickhouse connection: %+v", err)
 	}
 }

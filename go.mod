@@ -26,10 +26,13 @@ require (
 	golang.org/x/net v0.0.0-20210428140749-89ef3d95e781
 )
 
+require github.com/andres-erbsen/clock v0.0.0-20160526145045-9e14626cd129 // indirect
+
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
+	github.com/Workiva/go-datastructures v1.0.53
 	github.com/asaskevich/govalidator v0.0.0-20200907205600-7a23bdc65eef // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
@@ -56,6 +59,7 @@ require (
 	github.com/prometheus/common v0.14.0 // indirect
 	github.com/prometheus/procfs v0.2.0 // indirect
 	go.mongodb.org/mongo-driver v1.7.5 // indirect
+	go.uber.org/ratelimit v0.2.0
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
 	golang.org/x/mod v0.4.2 // indirect
 	golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8 // indirect

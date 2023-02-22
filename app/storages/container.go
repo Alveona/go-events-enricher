@@ -10,8 +10,8 @@ type Container struct {
 	ClickhouseStorage *events.CHStorage
 }
 
-func New(eventsCHConn clickhouse.ChConn, metrics events.Metrics, config *config.Config) *Container {
-	eventsCHStorage := events.NewCHRepo(eventsCHConn, metrics)
+func New(eventsCHConn clickhouse.ChConn, storageMetrics events.StorageMetrics, bufferMetrics events.BufferMetrics, config *config.Config) *Container {
+	eventsCHStorage := events.NewCHRepo(eventsCHConn, storageMetrics, bufferMetrics, config.Clickhouse.BufferConfig)
 	return &Container{
 		ClickhouseStorage: eventsCHStorage,
 	}
